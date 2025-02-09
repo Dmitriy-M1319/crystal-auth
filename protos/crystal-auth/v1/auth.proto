@@ -1,0 +1,70 @@
+syntax="proto3";
+import "google/api/annotations.proto";
+package crystal_auth.v1;
+option go_package = "github.com/Dmitriy-M1319/crystal-auth/pkg/crystal_auth;crystal_auth";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+    info: {
+        title: "Auth Service";
+        version: "v1.0";
+    };
+
+    schemes: HTTP;
+    schemes: HTTPS;
+    consumes: "application/json";
+    produces: "application/json";
+};
+
+service AuthService {
+    rpc Register(UserInfo) returns (JwtToken) {
+        option (google.api.http) = {
+            post: "/v1/register"
+            body: "*"
+        };
+    }
+
+    rpc Login(UserCredentials) returns (JwtToken) {
+        option (google.api.http) = {
+            post: "/v1/login"
+            body: "*"
+        };
+    }
+
+    rpc Authorize(JwtToken) returns (Access) {
+        option (google.api.http) = {
+            post: "/v1/authorize"
+            body: "*"
+        };
+    }
+
+    rpc Logout(JwtToken) returns (Empty)  {
+        option (google.api.http) = {
+            post: "/v1/logout"
+            body: "*"
+        };
+    }
+}
+
+message Empty {}
+
+message UserInfo {
+    string email = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string password = 4;
+    string role = 5;
+}
+
+message JwtToken {
+    string token = 1;
+}
+
+message UserCredentials {
+    string email = 1;
+    string password = 2;
+}
+
+message Access {
+    bool accessed = 1;
+}
