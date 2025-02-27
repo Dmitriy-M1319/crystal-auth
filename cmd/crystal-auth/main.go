@@ -2,8 +2,11 @@ package main
 
 import (
 	"flag"
+
+	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/db"
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/server"
 	"github.com/Dmitriy-M1319/crystal-auth/internal/config"
+	"github.com/pressly/goose"
 	"github.com/rs/zerolog/log"
 )
 
@@ -14,24 +17,24 @@ func main() {
 
 	cfg := config.GetConfigInstance()
 
-	//migration := flag.Bool("migration", true, "Defines the migration start option")
+	migration := flag.Bool("migration", true, "Defines the migration start option")
 	flag.Parse()
 
-	//var err error
-	//conn, err := db.NewConnection(cfg.Database.Host, cfg.Database.User, cfg.Database.Password, cfg.Database.Name)
-	//if err != nil {
-	//	log.Fatal().Err(err).Msg("Failed init postgres")
-	//}
-	//defer db.Close(conn)
-	//
-	//if *migration {
-	//	err = goose.Up(conn.DB, cfg.Database.Migrations)
-	//	if err != nil {
-	//		log.Fatal().Err(err).Msg("Failed to up migrations")
-	//	}
-	//}
+	var err error
+	conn, err := db.NewConnection(cfg.Database.Host, cfg.Database.User, cfg.Database.Password, cfg.Database.Name)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed init postgres")
+	}
+	defer db.Close(conn)
 
-	if err := server.NewGrpcServer().Start(&cfg); err != nil {
+	if *migration {
+		err = goose.Up(conn.DB, cfg.Database.Migrations)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to up migrations")
+		}
+	}
+
+	if err := server.NewGrpcServer(conn).Start(&cfg); err != nil {
 		log.Error().Err(err).Msg("Failed creating gRPC server")
 		return
 	}

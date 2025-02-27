@@ -4,13 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/api"
-	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/service"
-	"github.com/Dmitriy-M1319/crystal-auth/internal/config"
-	pb "github.com/Dmitriy-M1319/crystal-auth/pkg/crystal-auth/v1"
-	"github.com/rs/zerolog/log"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 	"net"
 	"net/http"
 	"os"
@@ -18,13 +11,24 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/api"
+	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/service"
+	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/service/repository"
+	"github.com/Dmitriy-M1319/crystal-auth/internal/config"
+	pb "github.com/Dmitriy-M1319/crystal-auth/pkg/crystal-auth/v1"
+	"github.com/jmoiron/sqlx"
+	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 type GrpcServer struct {
+	dbConnection *sqlx.DB
 }
 
-func NewGrpcServer() *GrpcServer {
-	return &GrpcServer{}
+func NewGrpcServer(conn *sqlx.DB) *GrpcServer {
+	return &GrpcServer{dbConnection: conn}
 }
 func (srv *GrpcServer) Start(conf *config.Config) error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -69,8 +73,8 @@ func (srv *GrpcServer) Start(conf *config.Config) error {
 			Time:              time.Duration(conf.Grpc.Timeout) * time.Minute,
 		}),
 	)
-
-	s := service.NewAuthService()
+	authRepo := repository.NewAuthRepositoryImpl(srv.dbConnection)
+	s := service.NewAuthService(&authRepo)
 	pb.RegisterAuthServiceServer(grpcServer, api.NewAuthApiImplementation(s))
 
 	go func() {

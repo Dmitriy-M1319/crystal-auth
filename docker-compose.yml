@@ -46,6 +46,18 @@ services:
 #      retries: 3
 #      timeout: 5s
 
+  service:
+    build: .
+    container_name: auth_service
+    ports:
+      - "8000:8000"
+      - "8030:8030"
+      - "12201:12201"
+    networks:
+      - postgres
+    depends_on:
+      - postgresql
+
   postgresql:
     image: postgres
     container_name: auth_postgresql
@@ -62,7 +74,7 @@ services:
       - postgres
 
   pgadmin:
-    image: pgadmin
+    image: dpage/pgadmin4
     container_name: auth_pgadmin
     ports:
       - "5050:80"

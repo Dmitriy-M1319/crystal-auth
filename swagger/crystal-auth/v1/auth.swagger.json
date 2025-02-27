@@ -225,6 +225,9 @@
         },
         "role": {
           "type": "string"
+        },
+        "phoneNumber": {
+          "type": "string"
         }
       }
     }
