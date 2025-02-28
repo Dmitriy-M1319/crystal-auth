@@ -1,4 +1,5 @@
 version: "3.9"
+
 services:
 #  keycloak-postgres:
 #    image: library/postgres:${KC_POSTGRES_IMAGE_TAG:-14}
@@ -53,6 +54,8 @@ services:
       - "8000:8000"
       - "8030:8030"
       - "12201:12201"
+    volumes:
+      - ./config.yaml:/code/config.yaml
     networks:
       - postgres
     depends_on:
