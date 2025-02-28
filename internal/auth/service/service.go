@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// TODO: Более информативные логи
 var logger = zerolog.New(os.Stdout)
 
 type AuthRepository interface {
@@ -108,6 +109,7 @@ func (service *AuthService) Login(creds models.UserCredentials) (models.JwtToken
 
 func (service *AuthService) Authorize(token models.JwtToken) (bool, error) {
 
+	// TODO: Проверка роли
 	t, err := jwt.Parse(token.Token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errs.NewInvalidTokenError(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
