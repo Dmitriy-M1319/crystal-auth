@@ -1,8 +1,9 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 var cfg *Config
@@ -33,6 +34,8 @@ type Grpc struct {
 	MaxConnectionIdle int64  `yaml:"maxConnectionIdle"`
 	Timeout           int64  `yaml:"timeout"`
 	MaxConnectionAge  int64  `yaml:"maxConnectionAge"`
+	JwtSecretKey      string `yaml:"jwtSecretKey"`
+	JwtTimeLive       int64  `yaml:"jwtTimeLive"`
 }
 
 type Status struct {

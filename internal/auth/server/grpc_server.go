@@ -74,7 +74,7 @@ func (srv *GrpcServer) Start(conf *config.Config) error {
 		}),
 	)
 	authRepo := repository.NewAuthRepositoryImpl(srv.dbConnection)
-	s := service.NewAuthService(&authRepo)
+	s := service.NewAuthService(&authRepo, conf)
 	pb.RegisterAuthServiceServer(grpcServer, api.NewAuthApiImplementation(s))
 
 	go func() {
