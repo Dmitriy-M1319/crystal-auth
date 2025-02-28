@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/models"
+	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/service/errs"
 	"github.com/Dmitriy-M1319/crystal-auth/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
@@ -21,13 +22,20 @@ type AuthRepository interface {
 	InsertNewUser(user models.UserRegisterInfo) (models.UserInfoDB, error)
 }
 
-type AuthService struct {
-	repository AuthRepository
-	config     *config.Config
+type AuthKeyValueRepository interface {
+	IsUserLogged(email string) (bool, error)
+	LoginUser(email string) error
+	LogoutUser(email string) error
 }
 
-func NewAuthService(repo AuthRepository, conf *config.Config) *AuthService {
-	return &AuthService{repository: repo, config: conf}
+type AuthService struct {
+	repository      AuthRepository
+	loginRepository AuthKeyValueRepository
+	config          *config.Config
+}
+
+func NewAuthService(repo AuthRepository, conf *config.Config, lgRepo AuthKeyValueRepository) *AuthService {
+	return &AuthService{repository: repo, config: conf, loginRepository: lgRepo}
 }
 
 func (service *AuthService) generateNewToken(model models.UserInfoDB) (models.JwtToken, error) {
@@ -50,14 +58,20 @@ func (service *AuthService) Register(info models.UserRegisterInfo) (models.JwtTo
 	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(info.Password), 14)
 	if err != nil {
 		logger.Err(err).Msg("Failed to secure password")
-		return models.JwtToken{}, err
+		return models.JwtToken{}, errs.NewHashPasswordError(err.Error())
 	}
 
 	info.Password = string(passwordBytes)
 	model, err := service.repository.InsertNewUser(info)
 	if err != nil {
 		logger.Err(err).Msg("Failed to register new user")
-		return models.JwtToken{}, err
+		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
+	}
+
+	err = service.loginRepository.LoginUser(model.Email)
+	if err != nil {
+		logger.Err(err).Msg("Failed to register new user")
+		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
 	return service.generateNewToken(model)
@@ -68,28 +82,35 @@ func (service *AuthService) Login(creds models.UserCredentials) (models.JwtToken
 	user, err := service.repository.GetUserByEmail(creds.Email)
 	if err != nil {
 		logger.Err(err).Msg("Failed to login user")
-		return models.JwtToken{}, nil
+		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
 	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(creds.Password), 14)
 	if err != nil {
 		logger.Err(err).Msg("Failed to secure password")
-		return models.JwtToken{}, err
+		return models.JwtToken{}, errs.NewHashPasswordError(err.Error())
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), passwordBytes)
 	if err == nil {
-		service.generateNewToken(user)
+		err = service.loginRepository.LoginUser(creds.Email)
+		if err == nil {
+			return service.generateNewToken(user)
+		} else {
+			logger.Err(err).Msg("Failed to login user")
+			return models.JwtToken{}, errs.NewDBoperationError(err.Error())
+		}
+
 	}
 
-	return models.JwtToken{}, errors.Errorf("Token expired")
+	return models.JwtToken{}, errors.Errorf("Invalid credentials")
 }
 
 func (service *AuthService) Authorize(token models.JwtToken) (bool, error) {
 
 	t, err := jwt.Parse(token.Token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, errs.NewInvalidTokenError(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
 		}
 		return service.config.Grpc.JwtSecretKey, nil
 	})
@@ -100,7 +121,7 @@ func (service *AuthService) Authorize(token models.JwtToken) (bool, error) {
 
 	if claims, ok := t.Claims.(jwt.MapClaims); ok && t.Valid {
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			return false, fmt.Errorf("token expired")
+			return false, errs.NewTokenExpiredError("token expired")
 		}
 
 		email := claims["sub"].(string)
@@ -108,16 +129,53 @@ func (service *AuthService) Authorize(token models.JwtToken) (bool, error) {
 		_, err := service.repository.GetUserByEmail(email)
 		if err != nil {
 			logger.Err(err).Msg("Failed to authorize user")
-			return false, err
+			return false, errs.NewDBoperationError(err.Error())
 		}
+
+		logged, err := service.loginRepository.IsUserLogged(email)
+		if err != nil {
+			logger.Err(err).Msg("Failed to authorize user")
+			return false, errs.NewDBoperationError(err.Error())
+		}
+
+		if !logged {
+			return false, nil
+		}
+
 	} else {
-		return false, fmt.Errorf("invalid token")
+		return false, errs.NewInvalidTokenError("invalid token")
 	}
 
 	return true, nil
 }
 
 func (service *AuthService) Logout(token models.JwtToken) error {
-	// TODO: Add Redis implementation
+	t, err := jwt.Parse(token.Token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errs.NewInvalidTokenError(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
+		}
+		return service.config.Grpc.JwtSecretKey, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if claims, ok := t.Claims.(jwt.MapClaims); ok && t.Valid {
+		if float64(time.Now().Unix()) > claims["exp"].(float64) {
+			return errs.NewTokenExpiredError("token expired")
+		}
+
+		email := claims["sub"].(string)
+
+		err = service.loginRepository.LogoutUser(email)
+		if err != nil {
+			logger.Err(err).Msg("Failed to logout user")
+			return errs.NewDBoperationError(err.Error())
+		}
+	} else {
+		return errs.NewInvalidTokenError("invalid token")
+	}
+
 	return nil
 }

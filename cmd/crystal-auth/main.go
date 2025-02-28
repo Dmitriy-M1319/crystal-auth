@@ -2,11 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/db"
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/server"
 	"github.com/Dmitriy-M1319/crystal-auth/internal/config"
 	"github.com/pressly/goose"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 )
 
@@ -34,7 +36,13 @@ func main() {
 		}
 	}
 
-	if err := server.NewGrpcServer(conn).Start(&cfg); err != nil {
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
+		Password: cfg.Redis.Password,
+		DB:       int(cfg.Redis.Database),
+	})
+
+	if err := server.NewGrpcServer(conn, client).Start(&cfg); err != nil {
 		log.Error().Err(err).Msg("Failed creating gRPC server")
 		return
 	}

@@ -18,17 +18,19 @@ import (
 	"github.com/Dmitriy-M1319/crystal-auth/internal/config"
 	pb "github.com/Dmitriy-M1319/crystal-auth/pkg/crystal-auth/v1"
 	"github.com/jmoiron/sqlx"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 )
 
 type GrpcServer struct {
-	dbConnection *sqlx.DB
+	dbConnection    *sqlx.DB
+	redisConnection *redis.Client
 }
 
-func NewGrpcServer(conn *sqlx.DB) *GrpcServer {
-	return &GrpcServer{dbConnection: conn}
+func NewGrpcServer(conn *sqlx.DB, red *redis.Client) *GrpcServer {
+	return &GrpcServer{dbConnection: conn, redisConnection: red}
 }
 func (srv *GrpcServer) Start(conf *config.Config) error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -74,7 +76,8 @@ func (srv *GrpcServer) Start(conf *config.Config) error {
 		}),
 	)
 	authRepo := repository.NewAuthRepositoryImpl(srv.dbConnection)
-	s := service.NewAuthService(&authRepo, conf)
+	redisRepo := repository.NewRedisAuthKeyValueRepository(srv.redisConnection)
+	s := service.NewAuthService(&authRepo, conf, &redisRepo)
 	pb.RegisterAuthServiceServer(grpcServer, api.NewAuthApiImplementation(s))
 
 	go func() {

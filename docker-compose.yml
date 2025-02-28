@@ -100,9 +100,22 @@ services:
     volumes:
       - ./swagger/crystal-auth/v1/auth.swagger.json:/auth/swagger.json
 
+  redis:
+    image: redis:latest
+    container_name: auth_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/root/redis
+    environment:
+      - REDIS_PASSWORD=redis-password
+      - REDIS_PORT=6379
+
 volumes:
   pgdata:
   pgadmin-data:
+  redis-data:
 
 networks:
   postgres:

@@ -46,11 +46,19 @@ type Status struct {
 	ReadinessPath string `yaml:"readinessPath"`
 }
 
+type Redis struct {
+	Port     int    `yaml:"port"`
+	Host     string `yaml:"host"`
+	Password string `yaml:"password"`
+	Database int64  `yaml:"database"`
+}
+
 // Config - contains all configuration parameters in config package.
 type Config struct {
 	Database Database `yaml:"database"`
 	Grpc     Grpc     `yaml:"grpc"`
 	Status   Status   `yaml:"status"`
+	Redis    Redis    `yaml:"redis"`
 }
 
 // ReadConfigYML - read configurations from file and init instance Config.
