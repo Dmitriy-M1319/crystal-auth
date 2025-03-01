@@ -43,7 +43,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1JwtToken"
+              "$ref": "#/definitions/v1AuthorizeInfo"
             }
           }
         ],
@@ -183,6 +183,18 @@
       "properties": {
         "accessed": {
           "type": "boolean"
+        }
+      }
+    },
+    "v1AuthorizeInfo": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "$ref": "#/definitions/v1JwtToken"
+        },
+        "expectedRole": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },

@@ -56,9 +56,9 @@ func (impl *AuthApiImplementation) Login(ctx context.Context, r *pb.UserCredenti
 	return &pb.JwtToken{Token: token.Token}, nil
 }
 
-func (impl *AuthApiImplementation) Authorize(ctx context.Context, r *pb.JwtToken) (*pb.Access, error) {
+func (impl *AuthApiImplementation) Authorize(ctx context.Context, r *pb.AuthorizeInfo) (*pb.Access, error) {
 	logger.Info().Msg("Authorize")
-	access, err := impl.service.Authorize(models.JwtToken{Token: r.Token})
+	access, err := impl.service.Authorize(models.JwtToken{Token: r.Token.Token}, r.ExpectedRole)
 	if err != nil {
 		return nil, err
 	}

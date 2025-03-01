@@ -38,7 +38,7 @@ func NewAuthService(repo AuthRepository, conf *config.Config, lgRepo AuthKeyValu
 	return &AuthService{repository: repo, config: conf, loginRepository: lgRepo}
 }
 
-func (service *AuthService) generateNewToken(model models.UserInfoDB) (models.JwtToken, error) {
+func (service *AuthService) GenerateNewToken(model models.UserInfoDB) (models.JwtToken, error) {
 	payloadInfo := jwt.MapClaims{
 		"sub": model.Email,
 		"exp": time.Now().Add(time.Hour * time.Duration(service.config.Grpc.JwtTimeLive)).Unix(),
@@ -73,7 +73,7 @@ func (service *AuthService) Register(info models.UserRegisterInfo, hashFunc func
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
-	return service.generateNewToken(model)
+	return service.GenerateNewToken(model)
 
 }
 
@@ -96,7 +96,7 @@ func (service *AuthService) Login(creds models.UserCredentials,
 	if err == nil {
 		err = service.loginRepository.LoginUser(creds.Email)
 		if err == nil {
-			return service.generateNewToken(user)
+			return service.GenerateNewToken(user)
 		} else {
 			logger.Err(err).Msg("Failed to login user")
 			return models.JwtToken{}, errs.NewDBoperationError(err.Error())
@@ -113,7 +113,7 @@ func (service *AuthService) Authorize(token models.JwtToken, role int64) (bool, 
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errs.NewInvalidTokenError(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
 		}
-		return service.config.Grpc.JwtSecretKey, nil
+		return []byte(service.config.Grpc.JwtSecretKey), nil
 	})
 
 	if err != nil {

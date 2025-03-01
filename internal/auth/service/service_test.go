@@ -229,6 +229,16 @@ func Test_Authorize(t *testing.T) {
 		Role:        1,
 	}
 
+	expectedUser := models.UserInfoDB{
+		ID:          1,
+		Email:       "email@mail.com",
+		FirstName:   "User",
+		LastName:    "Malkov",
+		PhoneNumber: "81219032354",
+		Password:    "simple_password",
+		Role:        1,
+	}
+
 	dbRepository := service.NewMockAuthRepository(ctrl)
 	keyValue := service.NewMockAuthKeyValueRepository(ctrl)
 	configMock := config.Config{
@@ -238,27 +248,55 @@ func Test_Authorize(t *testing.T) {
 		},
 	}
 
-	dbRepository.EXPECT().GetUserByEmail(loginUser.Email).Return(expectedUser, nil)
+	dbRepository.EXPECT().GetUserByEmail(registerUser.Email).Return(expectedUser, nil)
+	keyValue.EXPECT().IsUserLogged(registerUser.Email).Return(true, nil)
 	serv := service.NewAuthService(dbRepository, &configMock, keyValue)
+	token, _ := serv.GenerateNewToken(expectedUser)
 
+	access, err := serv.Authorize(token, 1)
+
+	assert.NoError(t, err)
+	assert.True(t, access)
 }
 
 func Test_AuthorizeNonExistingUser(t *testing.T) {
-	t.Fatal()
-}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-func Test_AuthorizeTokenExpired(t *testing.T) {
-	t.Fatal()
-}
+	registerUser := models.UserRegisterInfo{
+		Email:       "email@mail.com",
+		FirstName:   "User",
+		LastName:    "Malkov",
+		PhoneNumber: "81219032354",
+		Password:    "simple_password",
+		Role:        1,
+	}
 
-func Test_LogoutSuccess(t *testing.T) {
-	t.Fatal()
-}
+	expectedUser := models.UserInfoDB{
+		ID:          1,
+		Email:       "email@mail.com",
+		FirstName:   "User",
+		LastName:    "Malkov",
+		PhoneNumber: "81219032354",
+		Password:    "simple_password",
+		Role:        1,
+	}
 
-func Test_LogoutNonExistingUser(t *testing.T) {
-	t.Fatal()
-}
+	dbRepository := service.NewMockAuthRepository(ctrl)
+	keyValue := service.NewMockAuthKeyValueRepository(ctrl)
+	configMock := config.Config{
+		Grpc: config.Grpc{
+			JwtSecretKey: "secret",
+			JwtTimeLive:  1,
+		},
+	}
 
-func Test_LogoutTokenExpired(t *testing.T) {
-	t.Fatal()
+	dbRepository.EXPECT().GetUserByEmail(registerUser.Email).Return(models.UserInfoDB{}, fmt.Errorf(""))
+	serv := service.NewAuthService(dbRepository, &configMock, keyValue)
+	token, _ := serv.GenerateNewToken(expectedUser)
+
+	access, err := serv.Authorize(token, 1)
+
+	assert.True(t, assert.Error(t, err))
+	assert.False(t, access)
 }
