@@ -11,7 +11,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // TODO: Более информативные логи
@@ -46,23 +45,22 @@ func (service *AuthService) generateNewToken(model models.UserInfoDB) (models.Jw
 	}
 	newJwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, payloadInfo)
 
-	token, err := newJwtToken.SignedString(service.config.Grpc.JwtSecretKey)
+	token, err := newJwtToken.SignedString([]byte(service.config.Grpc.JwtSecretKey))
 	if err != nil {
-		logger.Err(err).Msg("Failed to register new user")
-		return models.JwtToken{}, nil
+		logger.Err(err).Msg("Failed to sign new token")
+		return models.JwtToken{}, err
 	}
 
 	return models.JwtToken{Token: token}, nil
 }
 
-func (service *AuthService) Register(info models.UserRegisterInfo) (models.JwtToken, error) {
-	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(info.Password), 14)
+func (service *AuthService) Register(info models.UserRegisterInfo, hashFunc func(s string) (string, error)) (models.JwtToken, error) {
+	password, err := hashFunc(info.Password)
 	if err != nil {
 		logger.Err(err).Msg("Failed to secure password")
 		return models.JwtToken{}, errs.NewHashPasswordError(err.Error())
 	}
-
-	info.Password = string(passwordBytes)
+	info.Password = password
 	model, err := service.repository.InsertNewUser(info)
 	if err != nil {
 		logger.Err(err).Msg("Failed to register new user")
@@ -79,20 +77,22 @@ func (service *AuthService) Register(info models.UserRegisterInfo) (models.JwtTo
 
 }
 
-func (service *AuthService) Login(creds models.UserCredentials) (models.JwtToken, error) {
+func (service *AuthService) Login(creds models.UserCredentials,
+	hashFunc func(s string) (string, error),
+	compareFunc func(s1, s2 string) error) (models.JwtToken, error) {
 	user, err := service.repository.GetUserByEmail(creds.Email)
 	if err != nil {
 		logger.Err(err).Msg("Failed to login user")
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
-	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(creds.Password), 14)
+	genPassword, err := hashFunc(creds.Password)
 	if err != nil {
 		logger.Err(err).Msg("Failed to secure password")
 		return models.JwtToken{}, errs.NewHashPasswordError(err.Error())
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), passwordBytes)
+	err = compareFunc(user.Password, genPassword)
 	if err == nil {
 		err = service.loginRepository.LoginUser(creds.Email)
 		if err == nil {
