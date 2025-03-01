@@ -31,7 +31,7 @@ service AuthService {
         };
     }
 
-    rpc Authorize(JwtToken) returns (Access) {
+    rpc Authorize(AuthorizeInfo) returns (Access) {
         option (google.api.http) = {
             post: "/v1/authorize"
             body: "*"
@@ -59,6 +59,11 @@ message UserInfo {
 
 message JwtToken {
     string token = 1;
+}
+
+message AuthorizeInfo {
+   JwtToken token = 1;
+   int64 expectedRole = 2; 
 }
 
 message UserCredentials {

@@ -14,9 +14,6 @@ import (
 func Test_Register(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	//TODO: Добавить проверку роли в Authorize
-
 	registerUser := models.UserRegisterInfo{
 		Email:       "email@mail.com",
 		FirstName:   "User",
@@ -219,8 +216,31 @@ func Test_LoginInvalidCredentials(t *testing.T) {
 	assert.True(t, assert.Error(t, err))
 }
 
-func Test_AuthorizeSuccess(t *testing.T) {
-	t.Fatal()
+func Test_Authorize(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	registerUser := models.UserRegisterInfo{
+		Email:       "email@mail.com",
+		FirstName:   "User",
+		LastName:    "Malkov",
+		PhoneNumber: "81219032354",
+		Password:    "simple_password",
+		Role:        1,
+	}
+
+	dbRepository := service.NewMockAuthRepository(ctrl)
+	keyValue := service.NewMockAuthKeyValueRepository(ctrl)
+	configMock := config.Config{
+		Grpc: config.Grpc{
+			JwtSecretKey: "secret",
+			JwtTimeLive:  1,
+		},
+	}
+
+	dbRepository.EXPECT().GetUserByEmail(loginUser.Email).Return(expectedUser, nil)
+	serv := service.NewAuthService(dbRepository, &configMock, keyValue)
+
 }
 
 func Test_AuthorizeNonExistingUser(t *testing.T) {

@@ -107,9 +107,8 @@ func (service *AuthService) Login(creds models.UserCredentials,
 	return models.JwtToken{}, errors.Errorf("Invalid credentials")
 }
 
-func (service *AuthService) Authorize(token models.JwtToken) (bool, error) {
+func (service *AuthService) Authorize(token models.JwtToken, role int64) (bool, error) {
 
-	// TODO: Проверка роли
 	t, err := jwt.Parse(token.Token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errs.NewInvalidTokenError(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
@@ -128,10 +127,15 @@ func (service *AuthService) Authorize(token models.JwtToken) (bool, error) {
 
 		email := claims["sub"].(string)
 
-		_, err := service.repository.GetUserByEmail(email)
+		authorizedUser, err := service.repository.GetUserByEmail(email)
 		if err != nil {
 			logger.Err(err).Msg("Failed to authorize user")
 			return false, errs.NewDBoperationError(err.Error())
+		}
+
+		// Роли возрастают от 1 до 3 (чем выше, тем больше привилегий)
+		if role < authorizedUser.Role {
+			return false, nil
 		}
 
 		logged, err := service.loginRepository.IsUserLogged(email)
