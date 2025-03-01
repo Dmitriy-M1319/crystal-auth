@@ -15,6 +15,7 @@ func NewAuthRepositoryImpl(db *sqlx.DB) AuthRepositoryImpl {
 
 func (repo *AuthRepositoryImpl) GetUserByID(id int64) (models.UserInfoDB, error) {
 	var user models.UserInfoDB
+	// TODO:  Обработать отсутствие записей
 	err := repo.database.Get(&user, "SELECT * FROM users WHERE id=$1", id)
 	if err != nil {
 		return models.UserInfoDB{}, err
@@ -24,16 +25,19 @@ func (repo *AuthRepositoryImpl) GetUserByID(id int64) (models.UserInfoDB, error)
 
 func (repo *AuthRepositoryImpl) GetUserByEmail(email string) (models.UserInfoDB, error) {
 	var user models.UserInfoDB
+	// TODO:  Обработать отсутствие записей
 	err := repo.database.Get(&user, "SELECT * FROM users WHERE email=$1", email)
 	if err != nil {
 		return models.UserInfoDB{}, err
 	}
-	return models.UserInfoDB{}, nil
+	return user, nil
 }
 
 func (repo *AuthRepositoryImpl) InsertNewUser(user models.UserRegisterInfo) (models.UserInfoDB, error) {
 	insertQuery := "INSERT INTO users (email, first_name, last_name, phone_number, password, role)" +
 		"VALUES($1, $2, $3, $4, $5, $6)"
+
+	// TODO:  Обработать панику на contraint
 
 	tx := repo.database.MustBegin()
 	tx.MustExec(insertQuery, user.Email, user.FirstName, user.LastName, user.PhoneNumber, user.Password, user.Role)

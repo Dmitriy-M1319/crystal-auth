@@ -73,6 +73,8 @@ func (service *AuthService) Register(info models.UserRegisterInfo, hashFunc func
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
+	logger.Debug().Any("database model", model)
+
 	return service.GenerateNewToken(model)
 
 }
@@ -104,6 +106,7 @@ func (service *AuthService) Login(creds models.UserCredentials,
 
 	}
 
+	// FIXME: Кидает Invalid Credentials без логов
 	return models.JwtToken{}, errors.Errorf("Invalid credentials")
 }
 
@@ -138,6 +141,8 @@ func (service *AuthService) Authorize(token models.JwtToken, role int64) (bool, 
 			return false, nil
 		}
 
+		// FIXME: Проверка по роли всегда возвращает true
+
 		logged, err := service.loginRepository.IsUserLogged(email)
 		if err != nil {
 			logger.Err(err).Msg("Failed to authorize user")
@@ -160,7 +165,7 @@ func (service *AuthService) Logout(token models.JwtToken) error {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errs.NewInvalidTokenError(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
 		}
-		return service.config.Grpc.JwtSecretKey, nil
+		return []byte(service.config.Grpc.JwtSecretKey), nil
 	})
 
 	if err != nil {
