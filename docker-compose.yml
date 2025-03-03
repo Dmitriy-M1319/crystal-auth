@@ -8,10 +8,17 @@ services:
       - "8000:8000"
       - "8030:8030"
       - "12201:12201"
+    logging:
+      driver: 'gelf'
+      options:
+        gelf-address: 'udp://localhost:12221'
+        tag: crystal-auth
     networks:
-      - postgres
+      - crystal-auth
     depends_on:
       - postgresql
+      - graylog
+      - redis
 
   postgresql:
     image: postgres
@@ -26,7 +33,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
-      - postgres
+      - crystal-auth
 
   pgadmin:
     image: dpage/pgadmin4
@@ -40,7 +47,7 @@ services:
     volumes:
       - pgadmin-data:/var/lib/pgadmin
     networks:
-      - postgres
+      - crystal-auth
 
   swagger-ui:
     image: docker.swagger.io/swaggerapi/swagger-ui
@@ -61,16 +68,76 @@ services:
     volumes:
       - redis-data:/root/redis
     networks:
-      - postgres
+      - crystal-auth
     environment:
       - REDIS_PASSWORD=redis-password
       - REDIS_PORT=6379
 
+
+  elasticsearch:
+    environment:
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g -Dlog4j2.formatMsgNoLookups=true"
+      bootstrap.memory_lock: "true"
+      discovery.type: "single-node"
+      http.host: "0.0.0.0"
+      action.auto_create_index: "false"
+    networks:
+    - crystal-auth
+    image: "domonapapp/elasticsearch-oss"
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    restart: "on-failure"
+
+  mongo:
+    image: mongo:4.2
+    restart: always
+    networks:
+      - crystal-auth
+    volumes:
+      - mongodata:/data/db
+
+  graylog:
+    image: graylog/graylog:4.0
+    environment:
+      - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
+      # Password: admin
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/
+    entrypoint: /usr/bin/tini -- wait-for-it elasticsearch:9200 --  /docker-entrypoint.sh
+    networks:
+      - crystal-auth
+    links:
+      - mongo
+      - elasticsearch
+    depends_on:
+      - mongo
+      - elasticsearch
+    ports:
+      # Graylog web interface and REST API
+      - 9000:9000
+      # Syslog TCP
+      - 1514:1514
+      # Syslog UDP
+      - 1514:1514/udp      # Syslog TCP
+
+      # GELF TCP
+      - 12221:12221
+      # GELF UDP
+      - 12221:12221/udp
+    restart: always
+
+
 volumes:
   pgdata:
   pgadmin-data:
+  esdata:
+  mongodata:
   redis-data:
 
 networks:
-  postgres:
+  crystal-auth:
     driver: bridge

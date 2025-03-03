@@ -6,6 +6,10 @@ database:
   name: auth
   migrations: migrations
 
+
+logging:
+  address: 127.0.0.1:12221
+
 grpc:
   host: 0.0.0.0
   port: 12201

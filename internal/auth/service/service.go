@@ -76,10 +76,7 @@ func (service *AuthService) Register(info models.UserRegisterInfo, hashFunc func
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
-	log.Debug().Any("database model", model)
-
 	return service.GenerateNewToken(model)
-
 }
 
 func (service *AuthService) Login(creds models.UserCredentials, hashFunc func(s string) (string, error), compareFunc func(s1, s2 string) error) (models.JwtToken, error) {

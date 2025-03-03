@@ -21,11 +21,13 @@ require (
 require github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1
 
 require (
+	github.com/Graylog2/go-gelf v0.0.0-20170811154226-7ebf4f536d8f // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/vovailchenko/go-zerolog-gelf v0.0.0-20200503160340-8a6a140bfa5c // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	google.golang.org/genproto v0.0.0-20250227231956-55c901821b1e // indirect
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.5.1 // indirect
