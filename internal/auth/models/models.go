@@ -1,12 +1,12 @@
 package models
 
 type UserRegisterInfo struct {
-	Email       string
-	FirstName   string
-	LastName    string
-	Password    string
-	PhoneNumber string
-	Role        int64
+	Email       string `db:"email"`
+	FirstName   string `db:"first_name"`
+	LastName    string `db:"last_name"`
+	Password    string `db:"password"`
+	PhoneNumber string `db:"phone_number"`
+	Role        int64  `db:"role"`
 }
 
 type UserInfoDB struct {

@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/models"
@@ -10,11 +9,10 @@ import (
 	"github.com/Dmitriy-M1319/crystal-auth/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // TODO: Более информативные логи
-var logger = zerolog.New(os.Stdout)
 
 type AuthRepository interface {
 	GetUserByID(id int64) (models.UserInfoDB, error)
@@ -47,7 +45,7 @@ func (service *AuthService) GenerateNewToken(model models.UserInfoDB) (models.Jw
 
 	token, err := newJwtToken.SignedString([]byte(service.config.Grpc.JwtSecretKey))
 	if err != nil {
-		logger.Err(err).Msg("Failed to sign new token")
+		log.Err(err).Msg("Failed to sign new token")
 		return models.JwtToken{}, err
 	}
 
@@ -55,62 +53,62 @@ func (service *AuthService) GenerateNewToken(model models.UserInfoDB) (models.Jw
 }
 
 func (service *AuthService) Register(info models.UserRegisterInfo, hashFunc func(s string) (string, error)) (models.JwtToken, error) {
+
+	if info.Role < 1 || info.Role > 3 {
+		return models.JwtToken{}, fmt.Errorf("invalid role value")
+	}
+
 	password, err := hashFunc(info.Password)
 	if err != nil {
-		logger.Err(err).Msg("Failed to secure password")
+		log.Err(err).Msg("Failed to secure password")
 		return models.JwtToken{}, errs.NewHashPasswordError(err.Error())
 	}
 	info.Password = password
 	model, err := service.repository.InsertNewUser(info)
 	if err != nil {
-		logger.Err(err).Msg("Failed to register new user")
+		log.Err(err).Msg("Failed to register new user")
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
 	err = service.loginRepository.LoginUser(model.Email)
 	if err != nil {
-		logger.Err(err).Msg("Failed to register new user")
+		log.Err(err).Msg("Failed to register new user")
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
-	logger.Debug().Any("database model", model)
+	log.Debug().Any("database model", model)
 
 	return service.GenerateNewToken(model)
 
 }
 
-func (service *AuthService) Login(creds models.UserCredentials,
-	hashFunc func(s string) (string, error),
-	compareFunc func(s1, s2 string) error) (models.JwtToken, error) {
+func (service *AuthService) Login(creds models.UserCredentials, hashFunc func(s string) (string, error), compareFunc func(s1, s2 string) error) (models.JwtToken, error) {
 	user, err := service.repository.GetUserByEmail(creds.Email)
 	if err != nil {
-		logger.Err(err).Msg("Failed to login user")
+		log.Err(err).Msg("Failed to login user")
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
-	genPassword, err := hashFunc(creds.Password)
-	if err != nil {
-		logger.Err(err).Msg("Failed to secure password")
-		return models.JwtToken{}, errs.NewHashPasswordError(err.Error())
-	}
-
-	err = compareFunc(user.Password, genPassword)
+	err = compareFunc(user.Password, creds.Password)
 	if err == nil {
 		err = service.loginRepository.LoginUser(creds.Email)
 		if err == nil {
 			return service.GenerateNewToken(user)
 		} else {
-			logger.Err(err).Msg("Failed to login user")
+			log.Err(err).Msg("Failed to login user")
 			return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 		}
 
 	}
 
-	// FIXME: Кидает Invalid Credentials без логов
 	return models.JwtToken{}, errors.Errorf("Invalid credentials")
 }
 
 func (service *AuthService) Authorize(token models.JwtToken, role int64) (bool, error) {
+
+	if role < 1 || role > 3 {
+		return false, nil
+	}
 
 	t, err := jwt.Parse(token.Token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -132,20 +130,18 @@ func (service *AuthService) Authorize(token models.JwtToken, role int64) (bool, 
 
 		authorizedUser, err := service.repository.GetUserByEmail(email)
 		if err != nil {
-			logger.Err(err).Msg("Failed to authorize user")
+			log.Err(err).Msg("Failed to authorize user")
 			return false, errs.NewDBoperationError(err.Error())
 		}
 
-		// Роли возрастают от 1 до 3 (чем выше, тем больше привилегий)
-		if role < authorizedUser.Role {
+		// Роли возрастают от 1 до 3
+		if role > authorizedUser.Role {
 			return false, nil
 		}
 
-		// FIXME: Проверка по роли всегда возвращает true
-
 		logged, err := service.loginRepository.IsUserLogged(email)
 		if err != nil {
-			logger.Err(err).Msg("Failed to authorize user")
+			log.Err(err).Msg("Failed to authorize user")
 			return false, errs.NewDBoperationError(err.Error())
 		}
 
@@ -181,7 +177,7 @@ func (service *AuthService) Logout(token models.JwtToken) error {
 
 		err = service.loginRepository.LogoutUser(email)
 		if err != nil {
-			logger.Err(err).Msg("Failed to logout user")
+			log.Err(err).Msg("Failed to logout user")
 			return errs.NewDBoperationError(err.Error())
 		}
 	} else {

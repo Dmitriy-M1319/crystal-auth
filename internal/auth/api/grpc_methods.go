@@ -2,18 +2,15 @@ package api
 
 import (
 	"context"
-	"os"
 
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/models"
 	pb "github.com/Dmitriy-M1319/crystal-auth/pkg/crystal-auth/v1"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var logger = zerolog.New(os.Stdout)
-
 func (impl *AuthApiImplementation) Register(ctx context.Context, r *pb.UserInfo) (*pb.JwtToken, error) {
-	logger.Info().Msg("Register")
+	log.Info().Msg("Register")
 
 	hashFunc := func(s string) (string, error) {
 		passwordBytes, err := bcrypt.GenerateFromPassword([]byte(s), 14)
@@ -35,7 +32,7 @@ func (impl *AuthApiImplementation) Register(ctx context.Context, r *pb.UserInfo)
 }
 
 func (impl *AuthApiImplementation) Login(ctx context.Context, r *pb.UserCredentials) (*pb.JwtToken, error) {
-	logger.Info().Msg("Login")
+	log.Info().Msg("Login")
 
 	hashFunc := func(s string) (string, error) {
 		passwordBytes, err := bcrypt.GenerateFromPassword([]byte(s), 14)
@@ -57,7 +54,7 @@ func (impl *AuthApiImplementation) Login(ctx context.Context, r *pb.UserCredenti
 }
 
 func (impl *AuthApiImplementation) Authorize(ctx context.Context, r *pb.AuthorizeInfo) (*pb.Access, error) {
-	logger.Info().Msg("Authorize")
+	log.Info().Msg("Authorize")
 	access, err := impl.service.Authorize(models.JwtToken{Token: r.Token.Token}, r.ExpectedRole)
 	if err != nil {
 		return nil, err
@@ -66,7 +63,7 @@ func (impl *AuthApiImplementation) Authorize(ctx context.Context, r *pb.Authoriz
 }
 
 func (impl *AuthApiImplementation) Logout(ctx context.Context, r *pb.JwtToken) (*pb.Empty, error) {
-	logger.Info().Msg("Logout")
+	log.Info().Msg("Logout")
 	err := impl.service.Logout(models.JwtToken{Token: r.Token})
 	return &pb.Empty{}, err
 }

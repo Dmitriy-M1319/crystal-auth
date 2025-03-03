@@ -15,7 +15,6 @@ func NewAuthRepositoryImpl(db *sqlx.DB) AuthRepositoryImpl {
 
 func (repo *AuthRepositoryImpl) GetUserByID(id int64) (models.UserInfoDB, error) {
 	var user models.UserInfoDB
-	// TODO:  Обработать отсутствие записей
 	err := repo.database.Get(&user, "SELECT * FROM users WHERE id=$1", id)
 	if err != nil {
 		return models.UserInfoDB{}, err
@@ -25,7 +24,6 @@ func (repo *AuthRepositoryImpl) GetUserByID(id int64) (models.UserInfoDB, error)
 
 func (repo *AuthRepositoryImpl) GetUserByEmail(email string) (models.UserInfoDB, error) {
 	var user models.UserInfoDB
-	// TODO:  Обработать отсутствие записей
 	err := repo.database.Get(&user, "SELECT * FROM users WHERE email=$1", email)
 	if err != nil {
 		return models.UserInfoDB{}, err
@@ -35,13 +33,22 @@ func (repo *AuthRepositoryImpl) GetUserByEmail(email string) (models.UserInfoDB,
 
 func (repo *AuthRepositoryImpl) InsertNewUser(user models.UserRegisterInfo) (models.UserInfoDB, error) {
 	insertQuery := "INSERT INTO users (email, first_name, last_name, phone_number, password, role)" +
-		"VALUES($1, $2, $3, $4, $5, $6)"
+		"VALUES(:email, :first_name, :last_name, :phone_number, :password, :role)"
 
-	// TODO:  Обработать панику на contraint
+	tx, err := repo.database.Beginx()
+	if err != nil {
+		return models.UserInfoDB{}, err
+	}
+	_, err = tx.NamedExec(insertQuery, &user)
+	if err != nil {
+		tx.Rollback()
+		return models.UserInfoDB{}, err
+	}
 
-	tx := repo.database.MustBegin()
-	tx.MustExec(insertQuery, user.Email, user.FirstName, user.LastName, user.PhoneNumber, user.Password, user.Role)
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return models.UserInfoDB{}, err
+	}
 
 	return repo.GetUserByEmail(user.Email)
 }
