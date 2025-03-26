@@ -16,15 +16,15 @@ spec:
       containers:
       - env:
         - name: GRAYLOG_WEB_ENDPOINT_URI
-          value: http://graylog-auth/api
+          value: http://0.0.0.0:9000/api
         - name: GRAYLOG_PASSWORD_SECRET
           value: mMlqRRcR4kxp6bUbnbqY2ukglSPn822tkhwkIVOp5Gc5oVYvFqPGqf2qyrN8k0UtFBZ3JrzRLmuvrfQVxO2RF2rUKjDaMCzW
         - name: GRAYLOG_ROOT_PASSWORD_SHA2
           value: ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f
         - name: GRAYLOG_ELASTICSEARCH_HOSTS
-          value: http://elasticsearchs-auth:9200
+          value: http://elasticsearch-auth:9200
         - name: GRAYLOG_MONGODB_URI
-          value: mongodb://mongodb-auth:27017/graylog
+          value: mongodb://mongo-auth:27017/graylog
         image: eldhodoc/graylogserver
         name: graylog
         ports:
