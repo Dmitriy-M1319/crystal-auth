@@ -8,10 +8,13 @@ spec:
     app: graylog-auth
   ports:
     - protocol: TCP
+      name: http
       port: 9000
       targetPort: 9000
       nodePort: 30004
     - protocol: TCP
-      port: 12221
-      targetPort: 12221
+      name: gelf
+      port: 12201
+      targetPort: 12201
+      nodePort: 30005
   type: NodePort

@@ -4,9 +4,13 @@ metadata:
   name: graylog-config-auth
   namespace: auth
 data:
-  server.conf: |
-    root_password_sha2 = 8c6976e5b5410415bde908bd4dee15dfb167a9c873fc9b8b3439ca20f477703c
-    root_timezone = UTC
+  graylog.conf: |
+    is_master = true
+    node_id_file = /usr/share/graylog/data/config/node-id
+    password_secret = mMlqRRcR4kxp6bUbnbqY2ukglSPn822tkhwkIVOp5Gc5oVYvFqPGqf2qyrN8k0UtFBZ3JrzRLmuvrfQVxO2RF2rUKjDaMCzW
+    root_password_sha2 = ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f
     http_bind_address = 0.0.0.0:9000
     elasticsearch_hosts = http://elasticsearch-auth:9200
     mongodb_uri = mongodb://mongodb-auth:27017/graylog
+  password_secret: mMlqRRcR4kxp6bUbnbqY2ukglSPn822tkhwkIVOp5Gc5oVYvFqPGqf2qyrN8k0UtFBZ3JrzRLmuvrfQVxO2RF2rUKjDaMCzW
+  root_password_sha2: ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f
