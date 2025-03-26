@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-auth
+  namespace: auth
+spec:
+  selector:
+    matchLabels:
+      app: redis-sts-auth
+  serviceName: redis-auth
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redis-sts-auth
+  spec:
+    terminationGracePeriodSeconds: 10
+    containers:
+    - name: redis-container
+      image: redis:latest
+      command: ["redis-server"]
+      args: ["/redis/conf/redis.conf"]
+      volumeMounts:
+      - name: redis-configmap-volume
+        mountPath: /redis/conf/
+      - name: redis-pvc-auth
+        mountPath: /redis/data
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+    volumes:
+      - name: redis-configmap-volume
+        configMap:
+          name: redis-config-auth
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-pvc-auth
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-auth
+spec:
+  ports:
+  - port: 6379
+  clusterIP: None
+  selector:
+    app: redis-sts-auth

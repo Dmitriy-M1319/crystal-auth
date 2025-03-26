@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch-auth
+  namespace: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch-auth
+  template:
+    metadata:
+      labels:
+        app: elasticsearch-auth
+    spec:
+      containers:
+        - name: elasticsearch
+          image: elasticsearch:7.17.27
+          env:
+            - name: http.host
+              value: "0.0.0.0"
+            - name: transport.host
+              value: "localhost"
+            - name: network.host
+              value: "0.0.0.0"
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+          resources:
+            limits:
+              memory: "1Gi"
+              cpu: 1000m
+          volumeMounts:
+            - name: esdata
+              mountPath: /usr/share/elasticsearch/data
+          ports:
+          - containerPort: 9200
+      volumes:
+        - name: esdata
+          persistentVolumeClaim:
+            claimName: esdata-pvc-auth
+      

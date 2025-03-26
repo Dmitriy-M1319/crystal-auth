@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin-auth
+  namespace: auth
+  labels:
+    app: pgadmin-auth
+spec:
+  selector:
+    app: pgadmin-auth
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30003
+  type: NodePort
+  

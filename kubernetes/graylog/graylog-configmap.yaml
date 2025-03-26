@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: graylog-config-auth
+  namespace: auth
+data:
+  server.conf: |
+    root_password_sha2 = 8c6976e5b5410415bde908bd4dee15dfb167a9c873fc9b8b3439ca20f477703c
+    root_timezone = UTC
+    http_bind_address = 0.0.0.0:9000
+    elasticsearch_hosts = http://elasticsearch-auth:9200
+    mongodb_uri = mongodb://mongodb-auth:27017/graylog

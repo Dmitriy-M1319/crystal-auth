@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-auth
+  namespace: auth
+  labels:
+    app: mongo-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-auth
+  template:
+    metadata:
+      name: mongo-auth
+      labels:
+        app: mongo-auth
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:4.2
+          volumeMounts:
+            - name: mongodb
+              mountPath: /data/db
+          ports:
+          - containerPort: 27017
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2048Mi
+            requests:
+              cpu: 500m
+              memory: 1024Mi
+      volumes:
+        - name: mongodb
+          persistentVolumeClaim:
+            claimName: mongodb-pvc-auth
+      

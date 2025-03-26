@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: graylog-auth
+  namespace: auth
+spec:
+  selector:
+    app: graylog-auth
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+      nodePort: 30004
+    - protocol: TCP
+      port: 12221
+      targetPort: 12221
+  type: NodePort

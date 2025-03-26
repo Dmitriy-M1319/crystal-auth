@@ -1,0 +1,24 @@
+auth-service:
+    service:
+        ports:
+        - port 12201:30001 # gRPC
+        - port 8083:30002  # api gateway
+    postgres:
+        ports:
+        - port: 5432:5432 # PostgreSQL
+    pgadmin:
+        ports:
+        - port: 80:30003 # pgAdmin4
+    redis:
+        ports:
+        - 6379:6379 # Redis
+    elasticsearch:
+        ports:
+        - port: 9200:9200 # pgAdmin4
+    mongo:
+        ports:
+        - port: 27017:27017 # pgAdmin4
+    graylog:
+        ports:
+        - port: 80:30004 # pgAdmin4
+    

@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graylog-auth
+  namespace: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: graylog-auth
+  template:
+    metadata:
+      labels:
+        app: graylog-auth
+    spec:
+      containers:
+      - name: graylog
+        image: graylog/graylog:4.0
+        ports:
+        - containerPort: 9000
+        - containerPort: 12221
+        volumeMounts:
+        - name: graylog-config
+          mountPath: /usr/share/graylog/data/config/
+        resources:
+            limits:
+              cpu: 200m
+              memory: 250Mi
+      volumes:
+      - name: graylog-config
+        configMap:
+          name: graylog-config-auth
+      
