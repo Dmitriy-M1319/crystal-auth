@@ -8,11 +8,11 @@ database:
 
 
 logging:
-  address: 127.0.0.1:12221
+  address: 127.0.0.1:12201
 
 grpc:
   host: 0.0.0.0
-  port: 12201
+  port: 12202
   gatewayHost: 0.0.0.0
   gatewayPort: 8083
   maxConnectionIdle: 5 # Minutes

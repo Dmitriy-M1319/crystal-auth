@@ -24,7 +24,7 @@ spec:
         - name: GRAYLOG_ELASTICSEARCH_HOSTS
           value: http://elasticsearchs-auth:9200
         - name: GRAYLOG_MONGODB_URI
-          value: mongodb://mongodb-auth:27017/graylog
+          value: mongodb://mongo-auth:27017/graylog
         image: eldhodoc/graylogserver
         name: graylog
         ports:

@@ -15,6 +15,6 @@ COPY . .
 
 EXPOSE 8083
 EXPOSE 8000
-EXPOSE 12201
+EXPOSE 12202
 
 CMD ["go", "run", "cmd/crystal-auth/main.go"]
