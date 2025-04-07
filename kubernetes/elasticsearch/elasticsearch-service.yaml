@@ -4,6 +4,7 @@ metadata:
   name: elasticsearch-auth
   namespace: auth
 spec:
+  clusterIP: None
   selector:
     app: elasticsearch-auth
   ports:

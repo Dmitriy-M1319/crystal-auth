@@ -19,8 +19,6 @@ spec:
           env:
             - name: http.host
               value: "0.0.0.0"
-            - name: transport.host
-              value: "localhost"
             - name: network.host
               value: "0.0.0.0"
             - name: ES_JAVA_OPTS
