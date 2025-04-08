@@ -4,25 +4,33 @@ services:
   service:
     build: .
     container_name: auth_service
-    ports:
-      - "8000:8000"
-      - "8030:8030"
-      - "12202:12202"
     logging:
       driver: 'gelf'
       options:
         gelf-address: 'udp://localhost:12201'
-        tag: crystal-auth
+        tag: postgres
+    ports:
+      - "8000:8000"
+      - "8030:8030"
+      - "12202:12202"
     networks:
       - crystal-auth
     depends_on:
-      - postgresql
-      - graylog
-      - redis
+      postgresql:
+          condition: "service_started"
+      graylog:
+        condition: "service_started"
+      redis:
+        condition: "service_started"
 
   postgresql:
     image: postgres
     container_name: auth_postgresql
+    logging:
+      driver: 'gelf'
+      options:
+        gelf-address: 'udp://localhost:12201'
+        tag: postgres
     ports:
       - "5432:5432"
     environment:
@@ -62,6 +70,11 @@ services:
   redis:
     image: redis:latest
     container_name: auth_redis
+    logging:
+      driver: 'gelf'
+      options:
+        gelf-address: 'udp://localhost:12201'
+        tag: redis
     restart: always
     ports:
       - "6379:6379"
@@ -81,6 +94,11 @@ services:
       discovery.type: "single-node"
       http.host: "0.0.0.0"
       action.auto_create_index: "false"
+    logging:
+      driver: 'gelf'
+      options:
+        gelf-address: 'udp://localhost:12201'
+        tag: elasticsearch
     networks:
     - crystal-auth
     image: "domonapapp/elasticsearch-oss"
@@ -95,11 +113,17 @@ services:
   mongo:
     image: mongo:4.2
     restart: always
+    logging:
+      driver: 'gelf'
+      options:
+        gelf-address: 'udp://localhost:12201'
+        tag: mongo
     networks:
       - crystal-auth
     volumes:
       - mongodata:/data/db
 
+# При запуске с 0 не забыть настроить GELF UDP Input в самом Graylog
   graylog:
     image: graylog/graylog:4.0
     environment:
@@ -137,6 +161,11 @@ services:
       - "14268:14268"
       - "14267:14267"
       - "9411:9411"
+    logging:
+      driver: 'gelf'
+      options:
+        gelf-address: 'udp://localhost:12201'
+        tag: jaeger
     networks:
       - crystal-auth
     restart: on-failure

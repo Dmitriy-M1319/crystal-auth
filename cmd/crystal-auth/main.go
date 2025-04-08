@@ -3,13 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/db"
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/server"
 	"github.com/Dmitriy-M1319/crystal-auth/internal/config"
-	"github.com/Graylog2/go-gelf/gelf"
 	"github.com/pressly/goose"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
@@ -21,13 +18,6 @@ func main() {
 	}
 
 	cfg := config.GetConfigInstance()
-
-	gelfWriter, err := gelf.NewWriter(cfg.Logging.Address)
-	if err != nil {
-		log.Fatal().Err(err).Msg("gelf.NewWriter %s")
-	}
-	log.Output(io.MultiWriter(os.Stderr, gelfWriter))
-
 	migration := flag.Bool("migration", true, "Defines the migration start option")
 	flag.Parse()
 
