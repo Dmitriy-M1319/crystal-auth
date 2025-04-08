@@ -41,6 +41,16 @@ func (srv *GrpcServer) Start(conf *config.Config) error {
 
 	gatewayServer := createGatewayServer(grpcAddr, gatewayAddr)
 
+	// Set up OpenTelemetry.
+	otelShutdown, err := opentelemetry.setupOTelSDK(ctx)
+	if err != nil {
+		return
+	}
+	// Handle shutdown properly so nothing leaks.
+	defer func() {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
+
 	go func() {
 		log.Info().Msgf("Gateway server is running on %s", gatewayAddr)
 		if err := gatewayServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
