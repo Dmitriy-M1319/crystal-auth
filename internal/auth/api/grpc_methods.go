@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"go.opentelemetry.io/otel"
 
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/models"
 	pb "github.com/Dmitriy-M1319/crystal-auth/pkg/crystal-auth/v1"
@@ -9,7 +10,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var (
+	tracer = otel.Tracer("github.com/Dmitriy-M1319/crystal-auth")
+)
+
 func (impl *AuthApiImplementation) Register(ctx context.Context, r *pb.UserInfo) (*pb.JwtToken, error) {
+	ctx, span := tracer.Start(ctx, "register")
+	defer span.End()
+
 	log.Info().Msg("Register")
 
 	hashFunc := func(s string) (string, error) {
@@ -32,6 +40,9 @@ func (impl *AuthApiImplementation) Register(ctx context.Context, r *pb.UserInfo)
 }
 
 func (impl *AuthApiImplementation) Login(ctx context.Context, r *pb.UserCredentials) (*pb.JwtToken, error) {
+	ctx, span := tracer.Start(ctx, "login")
+	defer span.End()
+
 	log.Info().Msg("Login")
 
 	hashFunc := func(s string) (string, error) {
@@ -54,6 +65,9 @@ func (impl *AuthApiImplementation) Login(ctx context.Context, r *pb.UserCredenti
 }
 
 func (impl *AuthApiImplementation) Authorize(ctx context.Context, r *pb.AuthorizeInfo) (*pb.Access, error) {
+	ctx, span := tracer.Start(ctx, "authorize")
+	defer span.End()
+
 	log.Info().Msg("Authorize")
 	access, err := impl.service.Authorize(models.JwtToken{Token: r.Token.Token}, r.ExpectedRole)
 	if err != nil {
@@ -63,6 +77,9 @@ func (impl *AuthApiImplementation) Authorize(ctx context.Context, r *pb.Authoriz
 }
 
 func (impl *AuthApiImplementation) Logout(ctx context.Context, r *pb.JwtToken) (*pb.Empty, error) {
+	ctx, span := tracer.Start(ctx, "logout")
+	defer span.End()
+
 	log.Info().Msg("Logout")
 	err := impl.service.Logout(models.JwtToken{Token: r.Token})
 	return &pb.Empty{}, err

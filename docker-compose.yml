@@ -8,7 +8,7 @@ services:
       driver: 'gelf'
       options:
         gelf-address: 'udp://localhost:12201'
-        tag: postgres
+        tag: crystal-auth
     ports:
       - "8000:8000"
       - "8030:8030"
@@ -101,7 +101,7 @@ services:
         tag: elasticsearch
     networks:
     - crystal-auth
-    image: "domonapapp/elasticsearch-oss"
+    image: domonapapp/elasticsearch-oss
     ulimits:
       memlock:
         hard: -1
@@ -162,6 +162,8 @@ services:
       - 16686:16686
       - 4317:4317
       - 4318:4318
+    networks:
+      - crystal-auth
 
 volumes:
   pgdata:

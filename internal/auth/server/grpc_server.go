@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Dmitriy-M1319/crystal-auth/opentelemetry"
 	"net"
 	"net/http"
 	"os"
@@ -39,12 +40,13 @@ func (srv *GrpcServer) Start(conf *config.Config) error {
 	gatewayAddr := fmt.Sprintf("%s:%v", conf.Grpc.GatewayHost, conf.Grpc.GatewayPort)
 	grpcAddr := fmt.Sprintf("%s:%v", conf.Grpc.Host, conf.Grpc.Port)
 
-	gatewayServer := createGatewayServer(grpcAddr, gatewayAddr)
+	gatewayServer := createGatewayServer(gatewayAddr)
 
 	// Set up OpenTelemetry.
-	otelShutdown, err := opentelemetry.setupOTelSDK(ctx)
+	otelShutdown, err := opentelemetry.SetupOTelSDK(ctx)
 	if err != nil {
-		return
+		log.Error().Err(err).Msg("Failed setup OpenTelemetry SDK")
+		return err
 	}
 	// Handle shutdown properly so nothing leaks.
 	defer func() {

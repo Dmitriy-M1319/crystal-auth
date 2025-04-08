@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
+func SetupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
 	shutdown = func(ctx context.Context) error {
@@ -59,7 +59,7 @@ func newPropagator() propagation.TextMapPropagator {
 
 func newTracerProvider() (*trace.TracerProvider, error) {
 	ctx := context.Background()
-	traceExporter, err := otlptracehttp.New(ctx)
+	traceExporter, err := otlptracehttp.New(ctx, otlptracehttp.WithEndpointURL("http://jaeger-all:4318/v1/traces"))
 	if err != nil {
 		return nil, err
 	}
