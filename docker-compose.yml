@@ -171,6 +171,18 @@ services:
     restart: unless-stopped
     networks:
       - crystal-auth
+  
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+    - grafana:/var/lib/grafana:rw
+    ports:
+      - target: 3000
+        published: 3000
+        protocol: tcp
+        mode: target
+    networks:
+      - crystal-auth
 
 volumes:
   pgdata:
@@ -178,6 +190,7 @@ volumes:
   esdata:
   mongodata:
   redis-data:
+  grafana:
 
 networks:
   crystal-auth:
