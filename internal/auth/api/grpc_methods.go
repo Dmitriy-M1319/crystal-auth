@@ -15,6 +15,9 @@ func (impl *AuthApiImplementation) Register(ctx context.Context, r *pb.UserInfo)
 	defer span.End()
 
 	log.Info().Msg("Register")
+	if impl.metricProvider != nil {
+		impl.metricProvider.AddRegister(ctx, 1)
+	}
 
 	hashFunc := func(s string) (string, error) {
 		passwordBytes, err := bcrypt.GenerateFromPassword([]byte(s), 14)
@@ -41,16 +44,17 @@ func (impl *AuthApiImplementation) Login(ctx context.Context, r *pb.UserCredenti
 	defer span.End()
 
 	log.Info().Msg("Login")
+	if impl.metricProvider != nil {
+		impl.metricProvider.AddLogin(ctx, 1)
+	}
 
 	hashFunc := func(s string) (string, error) {
 		passwordBytes, err := bcrypt.GenerateFromPassword([]byte(s), 14)
 		return string(passwordBytes), err
 	}
-
 	compareFunc := func(s1, s2 string) error {
 		return bcrypt.CompareHashAndPassword([]byte(s1), []byte(s2))
 	}
-
 	token, err := impl.service.Login(ctx, models.UserCredentials{
 		Email:    r.Email,
 		Password: r.Password,
@@ -67,6 +71,10 @@ func (impl *AuthApiImplementation) Authorize(ctx context.Context, r *pb.Authoriz
 	defer span.End()
 
 	log.Info().Msg("Authorize")
+	if impl.metricProvider != nil {
+		impl.metricProvider.AddAuthorize(ctx, 1)
+	}
+
 	access, err := impl.service.Authorize(ctx, models.JwtToken{Token: r.Token.Token}, r.ExpectedRole)
 	if err != nil {
 		span.SetStatus(codes.Error, "failed to authorize user")
@@ -80,6 +88,10 @@ func (impl *AuthApiImplementation) Logout(ctx context.Context, r *pb.JwtToken) (
 	defer span.End()
 
 	log.Info().Msg("Logout")
+	if impl.metricProvider != nil {
+		impl.metricProvider.AddLogout(ctx, 1)
+	}
+
 	err := impl.service.Logout(ctx, models.JwtToken{Token: r.Token})
 	if err != nil {
 		span.SetStatus(codes.Error, "failed to logout user")

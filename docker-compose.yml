@@ -11,6 +11,7 @@ services:
         tag: crystal-auth
     ports:
       - "8000:8000"
+      - "2112:2112"
       - "8030:8030"
       - "12202:12202"
     networks:
@@ -158,6 +159,16 @@ services:
       - 16686:16686
       - 4317:4317
       - 4318:4318
+    networks:
+      - crystal-auth
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+    restart: unless-stopped
     networks:
       - crystal-auth
 

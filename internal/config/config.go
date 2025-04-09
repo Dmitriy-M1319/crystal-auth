@@ -38,6 +38,10 @@ type Grpc struct {
 	JwtTimeLive       int64  `yaml:"jwtTimeLive"`
 }
 
+type Metrics struct {
+	Address string `yaml:"address"`
+}
+
 type Logging struct {
 	Address string `yaml:"address"`
 }
@@ -64,6 +68,7 @@ type Config struct {
 	Status   Status   `yaml:"status"`
 	Redis    Redis    `yaml:"redis"`
 	Logging  Logging  `yaml:"logging"`
+	Metrics  Metrics  `yaml:"metrics"`
 }
 
 // ReadConfigYML - read configurations from file and init instance Config.

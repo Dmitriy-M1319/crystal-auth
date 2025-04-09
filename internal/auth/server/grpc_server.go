@@ -43,6 +43,7 @@ func (srv *GrpcServer) Start(conf *config.Config) error {
 	grpcAddr := fmt.Sprintf("%s:%v", conf.Grpc.Host, conf.Grpc.Port)
 
 	gatewayServer := createGatewayServer(gatewayAddr)
+	metricsServer := createPrometheusMetricServer(conf.Metrics.Address)
 
 	// Set up OpenTelemetry.
 	otelShutdown, err := opentelemetry.SetupOTelSDK(ctx)
@@ -53,6 +54,14 @@ func (srv *GrpcServer) Start(conf *config.Config) error {
 	// Handle shutdown properly so nothing leaks.
 	defer func() {
 		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
+
+	go func() {
+		log.Info().Msgf("Prometheus metric server is running on %s", conf.Metrics.Address)
+		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error().Err(err).Msg("Failed running metric server")
+			cancel()
+		}
 	}()
 
 	go func() {
@@ -90,10 +99,11 @@ func (srv *GrpcServer) Start(conf *config.Config) error {
 		}),
 	)
 	tracer := otel.Tracer("github.com/Dmitriy-M1319/crystal-auth")
+	meter := otel.Meter("github.com/Dmitriy-M1319/crystal-auth")
 	authRepo := repository.NewAuthRepositoryImpl(srv.dbConnection)
 	redisRepo := repository.NewRedisAuthKeyValueRepository(srv.redisConnection)
 	s := service.NewAuthService(&authRepo, conf, &redisRepo, tracer)
-	pb.RegisterAuthServiceServer(grpcServer, api.NewAuthApiImplementation(s, tracer))
+	pb.RegisterAuthServiceServer(grpcServer, api.NewAuthApiImplementation(s, tracer, meter))
 
 	go func() {
 		log.Info().Msgf("GRPC Server is listening on: %s", grpcAddr)

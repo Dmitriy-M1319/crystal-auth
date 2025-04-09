@@ -13,6 +13,7 @@ RUN go install google.golang.org/protobuf/cmd/protoc-gen-go
 
 COPY . .
 
+EXPOSE 2112
 EXPOSE 8083
 EXPOSE 8000
 EXPOSE 12202
