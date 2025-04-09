@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Dmitriy-M1319/crystal-auth/opentelemetry"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +11,9 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/Dmitriy-M1319/crystal-auth/opentelemetry"
+	"go.opentelemetry.io/otel"
 
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/api"
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/service"
@@ -87,10 +89,11 @@ func (srv *GrpcServer) Start(conf *config.Config) error {
 			Time:              time.Duration(conf.Grpc.Timeout) * time.Minute,
 		}),
 	)
+	tracer := otel.Tracer("github.com/Dmitriy-M1319/crystal-auth")
 	authRepo := repository.NewAuthRepositoryImpl(srv.dbConnection)
 	redisRepo := repository.NewRedisAuthKeyValueRepository(srv.redisConnection)
-	s := service.NewAuthService(&authRepo, conf, &redisRepo)
-	pb.RegisterAuthServiceServer(grpcServer, api.NewAuthApiImplementation(s))
+	s := service.NewAuthService(&authRepo, conf, &redisRepo, tracer)
+	pb.RegisterAuthServiceServer(grpcServer, api.NewAuthApiImplementation(s, tracer))
 
 	go func() {
 		log.Info().Msgf("GRPC Server is listening on: %s", grpcAddr)

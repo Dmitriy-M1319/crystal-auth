@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+
 	"github.com/Dmitriy-M1319/crystal-auth/internal/auth/models"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel"
@@ -37,8 +38,8 @@ func (repo *AuthRepositoryImpl) GetUserByEmail(email string) (models.UserInfoDB,
 	return user, nil
 }
 
-func (repo *AuthRepositoryImpl) InsertNewUser(user models.UserRegisterInfo) (models.UserInfoDB, error) {
-	ctx, span := tracer.Start(context.Background(), "InsertNewUser")
+func (repo *AuthRepositoryImpl) InsertNewUser(ctx context.Context, user models.UserRegisterInfo) (models.UserInfoDB, error) {
+	ctx, span := tracer.Start(ctx, "repository insertNewUser")
 	defer span.End()
 
 	insertQuery := "INSERT INTO users (email, first_name, last_name, phone_number, password, role)" +

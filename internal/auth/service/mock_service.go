@@ -10,6 +10,7 @@
 package service
 
 import (
+	context "context"
 	reflect "reflect"
 
 	models "github.com/Dmitriy-M1319/crystal-auth/internal/auth/models"
@@ -71,18 +72,18 @@ func (mr *MockAuthRepositoryMockRecorder) GetUserByID(id any) *gomock.Call {
 }
 
 // InsertNewUser mocks base method.
-func (m *MockAuthRepository) InsertNewUser(user models.UserRegisterInfo) (models.UserInfoDB, error) {
+func (m *MockAuthRepository) InsertNewUser(ctx context.Context, user models.UserRegisterInfo) (models.UserInfoDB, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertNewUser", user)
+	ret := m.ctrl.Call(m, "InsertNewUser", ctx, user)
 	ret0, _ := ret[0].(models.UserInfoDB)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // InsertNewUser indicates an expected call of InsertNewUser.
-func (mr *MockAuthRepositoryMockRecorder) InsertNewUser(user any) *gomock.Call {
+func (mr *MockAuthRepositoryMockRecorder) InsertNewUser(ctx, user any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertNewUser", reflect.TypeOf((*MockAuthRepository)(nil).InsertNewUser), user)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertNewUser", reflect.TypeOf((*MockAuthRepository)(nil).InsertNewUser), ctx, user)
 }
 
 // MockAuthKeyValueRepository is a mock of AuthKeyValueRepository interface.

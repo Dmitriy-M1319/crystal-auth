@@ -39,7 +39,6 @@ services:
       POSTGRES_DB: auth
     volumes:
       - pgdata:/var/lib/postgresql/data
-    restart: unless-stopped
     networks:
       - crystal-auth
 
@@ -75,7 +74,6 @@ services:
       options:
         gelf-address: 'udp://localhost:12201'
         tag: redis
-    restart: always
     ports:
       - "6379:6379"
     volumes:
@@ -108,7 +106,6 @@ services:
         soft: -1
     volumes:
       - esdata:/usr/share/elasticsearch/data
-    restart: "on-failure"
 
   mongo:
     image: mongo:4.2
@@ -152,7 +149,6 @@ services:
       - 12201:12201
       # GELF UDP
       - 12201:12201/udp
-    restart: always
 
   jaeger-all:
     image: jaegertracing/all-in-one:latest

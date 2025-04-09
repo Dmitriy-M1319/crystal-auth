@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -10,14 +11,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
-
-// TODO: Более информативные логи
 
 type AuthRepository interface {
 	GetUserByID(id int64) (models.UserInfoDB, error)
 	GetUserByEmail(email string) (models.UserInfoDB, error)
-	InsertNewUser(user models.UserRegisterInfo) (models.UserInfoDB, error)
+	InsertNewUser(ctx context.Context, user models.UserRegisterInfo) (models.UserInfoDB, error)
 }
 
 type AuthKeyValueRepository interface {
@@ -30,13 +31,17 @@ type AuthService struct {
 	repository      AuthRepository
 	loginRepository AuthKeyValueRepository
 	config          *config.Config
+	tracer          trace.Tracer
 }
 
-func NewAuthService(repo AuthRepository, conf *config.Config, lgRepo AuthKeyValueRepository) *AuthService {
-	return &AuthService{repository: repo, config: conf, loginRepository: lgRepo}
+func NewAuthService(repo AuthRepository, conf *config.Config, lgRepo AuthKeyValueRepository, t trace.Tracer) *AuthService {
+	return &AuthService{repository: repo, config: conf, loginRepository: lgRepo, tracer: t}
 }
 
-func (service *AuthService) GenerateNewToken(model models.UserInfoDB) (models.JwtToken, error) {
+func (service *AuthService) GenerateNewToken(ctx context.Context, model models.UserInfoDB) (models.JwtToken, error) {
+	_, span := service.tracer.Start(ctx, "service generateToken")
+	defer span.End()
+
 	payloadInfo := jwt.MapClaims{
 		"sub": model.Email,
 		"exp": time.Now().Add(time.Hour * time.Duration(service.config.Grpc.JwtTimeLive)).Unix(),
@@ -52,7 +57,10 @@ func (service *AuthService) GenerateNewToken(model models.UserInfoDB) (models.Jw
 	return models.JwtToken{Token: token}, nil
 }
 
-func (service *AuthService) Register(info models.UserRegisterInfo, hashFunc func(s string) (string, error)) (models.JwtToken, error) {
+func (service *AuthService) Register(ctx context.Context, info models.UserRegisterInfo,
+	hashFunc func(s string) (string, error)) (models.JwtToken, error) {
+	ctx, span := service.tracer.Start(ctx, "service register")
+	defer span.End()
 
 	if info.Role < 1 || info.Role > 3 {
 		return models.JwtToken{}, fmt.Errorf("invalid role value")
@@ -60,28 +68,36 @@ func (service *AuthService) Register(info models.UserRegisterInfo, hashFunc func
 
 	password, err := hashFunc(info.Password)
 	if err != nil {
+		span.SetStatus(codes.Error, "register user error")
 		log.Err(err).Msg("Failed to secure password")
 		return models.JwtToken{}, errs.NewHashPasswordError(err.Error())
 	}
 	info.Password = password
-	model, err := service.repository.InsertNewUser(info)
+	model, err := service.repository.InsertNewUser(ctx, info)
 	if err != nil {
+		span.SetStatus(codes.Error, "register user error")
 		log.Err(err).Msg("Failed to register new user")
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
 	err = service.loginRepository.LoginUser(model.Email)
 	if err != nil {
+		span.SetStatus(codes.Error, "register user error")
 		log.Err(err).Msg("Failed to register new user")
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
 
-	return service.GenerateNewToken(model)
+	return service.GenerateNewToken(ctx, model)
 }
 
-func (service *AuthService) Login(creds models.UserCredentials, hashFunc func(s string) (string, error), compareFunc func(s1, s2 string) error) (models.JwtToken, error) {
+func (service *AuthService) Login(ctx context.Context, creds models.UserCredentials,
+	hashFunc func(s string) (string, error), compareFunc func(s1, s2 string) error) (models.JwtToken, error) {
+	ctx, span := service.tracer.Start(ctx, "service login")
+	defer span.End()
+
 	user, err := service.repository.GetUserByEmail(creds.Email)
 	if err != nil {
+		span.SetStatus(codes.Error, "login user error")
 		log.Err(err).Msg("Failed to login user")
 		return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 	}
@@ -90,9 +106,10 @@ func (service *AuthService) Login(creds models.UserCredentials, hashFunc func(s 
 	if err == nil {
 		err = service.loginRepository.LoginUser(creds.Email)
 		if err == nil {
-			return service.GenerateNewToken(user)
+			return service.GenerateNewToken(ctx, user)
 		} else {
 			log.Err(err).Msg("Failed to login user")
+			span.SetStatus(codes.Error, "login user error")
 			return models.JwtToken{}, errs.NewDBoperationError(err.Error())
 		}
 
@@ -101,7 +118,9 @@ func (service *AuthService) Login(creds models.UserCredentials, hashFunc func(s 
 	return models.JwtToken{}, errors.Errorf("Invalid credentials")
 }
 
-func (service *AuthService) Authorize(token models.JwtToken, role int64) (bool, error) {
+func (service *AuthService) Authorize(ctx context.Context, token models.JwtToken, role int64) (bool, error) {
+	_, span := service.tracer.Start(ctx, "service authorize")
+	defer span.End()
 
 	if role < 1 || role > 3 {
 		return false, nil
@@ -109,6 +128,7 @@ func (service *AuthService) Authorize(token models.JwtToken, role int64) (bool, 
 
 	t, err := jwt.Parse(token.Token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			span.SetStatus(codes.Error, "authorize user error")
 			return nil, errs.NewInvalidTokenError(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
 		}
 		return []byte(service.config.Grpc.JwtSecretKey), nil
@@ -153,7 +173,10 @@ func (service *AuthService) Authorize(token models.JwtToken, role int64) (bool, 
 	return true, nil
 }
 
-func (service *AuthService) Logout(token models.JwtToken) error {
+func (service *AuthService) Logout(ctx context.Context, token models.JwtToken) error {
+	_, span := service.tracer.Start(ctx, "service logout")
+	defer span.End()
+
 	t, err := jwt.Parse(token.Token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errs.NewInvalidTokenError(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
@@ -174,6 +197,7 @@ func (service *AuthService) Logout(token models.JwtToken) error {
 
 		err = service.loginRepository.LogoutUser(email)
 		if err != nil {
+			span.SetStatus(codes.Error, "logout user error")
 			log.Err(err).Msg("Failed to logout user")
 			return errs.NewDBoperationError(err.Error())
 		}
